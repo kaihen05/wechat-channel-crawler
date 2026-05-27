@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学校识别测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">学校识别功能测试</h1>
+
+        <!-- 测试1: 获取学校列表 -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">1. 获取学校列表</h2>
+            <button onclick="testGetUniversities()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                测试获取学校列表
+            </button>
+            <div id="universityList" class="mt-4 p-4 bg-gray-100 rounded max-h-64 overflow-auto"></div>
+        </div>
+
+        <!-- 测试2: 识别学校 -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">2. 识别学校</h2>
+            <input
+                type="text"
+                id="testNickname"
+                placeholder="输入公众号名称"
+                class="w-full px-4 py-2 border border-gray-300 rounded mb-4"
+                value="清华大学学生会"
+            >
+            <button onclick="testIdentifyUniversity()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                测试识别学校
+            </button>
+            <div id="identifyResult" class="mt-4 p-4 bg-gray-100 rounded"></div>
+        </div>
+
+        <!-- 测试3: 按学校筛选文章 -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">3. 按学校筛选文章</h2>
+            <select id="universitySelect" class="w-full px-4 py-2 border border-gray-300 rounded mb-4">
+                <option value="">选择学校...</option>
+            </select>
+            <button onclick="testFilterArticles()" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                测试筛选文章
+            </button>
+            <div id="articlesResult" class="mt-4 p-4 bg-gray-100 rounded max-h-64 overflow-auto"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+
+        // 测试获取学校列表
+        async function testGetUniversities() {
+            try {
+                const response = await fetch(`${API_BASE}/channels/universities`);
+                const universities = await response.json();
+
+                const listDiv = document.getElementById('universityList');
+                listDiv.innerHTML = `<p class="text-green-600 font-semibold">✅ 成功获取 ${universities.length} 所学校</p>`;
+                listDiv.innerHTML += '<ul class="mt-2 space-y-1">';
+                universities.forEach(uni => {
+                    listDiv.innerHTML += `<li class="text-sm">- ${uni}</li>`;
+                });
+                listDiv.innerHTML += '</ul>';
+
+                // 填充选择框
+                const select = document.getElementById('universitySelect');
+                select.innerHTML = '<option value="">选择学校...</option>';
+                universities.forEach(uni => {
+                    const option = document.createElement('option');
+                    option.value = uni;
+                    option.textContent = uni;
+                    select.appendChild(option);
+                });
+
+            } catch (error) {
+                document.getElementById('universityList').innerHTML =
+                    `<p class="text-red-600 font-semibold">❌ 错误: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+
+        // 测试识别学校
+        async function testIdentifyUniversity() {
+            const nickname = document.getElementById('testNickname').value;
+            if (!nickname) {
+                alert('请输入公众号名称');
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `${API_BASE}/channels/identify-university?nickname=${encodeURIComponent(nickname)}`
+                );
+                const result = await response.json();
+
+                const resultDiv = document.getElementById('identifyResult');
+                resultDiv.innerHTML = `
+                    <p class="text-green-600 font-semibold">✅ 识别成功</p>
+                    <p class="mt-2"><strong>公众号:</strong> ${result.nickname}</p>
+                    <p><strong>识别学校:</strong> ${result.university}</p>
+                    <p><strong>识别方法:</strong> ${result.method}</p>
+                `;
+            } catch (error) {
+                document.getElementById('identifyResult').innerHTML =
+                    `<p class="text-red-600 font-semibold">❌ 错误: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+
+        // 测试筛选文章
+        async function testFilterArticles() {
+            const university = document.getElementById('universitySelect').value;
+            if (!university) {
+                alert('请先选择学校');
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `${API_BASE}/articles?university=${encodeURIComponent(university)}&limit=5`
+                );
+                const articles = await response.json();
+
+                const resultDiv = document.getElementById('articlesResult');
+                if (articles.length === 0) {
+                    resultDiv.innerHTML = `<p class="text-yellow-600">⚠️ 该学校暂无文章数据</p>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="text-green-600 font-semibold">✅ 找到 ${articles.length} 篇文章</p>`;
+                    articles.forEach(article => {
+                        resultDiv.innerHTML += `
+                            <div class="mt-2 p-2 bg-white rounded">
+                                <p class="font-medium">${article.title}</p>
+                                <p class="text-sm text-gray-600">${article.account_name}</p>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (error) {
+                document.getElementById('articlesResult').innerHTML =
+                    `<p class="text-red-600 font-semibold">❌ 错误: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+
+        // 页面加载时自动获取学校列表
+        document.addEventListener('DOMContentLoaded', () => {
+            testGetUniversities();
+        });
+    </script>
+</body>
+</html>

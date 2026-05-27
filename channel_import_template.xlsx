@@ -1,0 +1,4 @@
+fakeid	nickname	category	account_name	avatar_url
+说明	说明	说明	说明	说明
+这是公众号的唯一标识	公众号名称	分类（游戏/产品/人力/技术）	公众号账号名（选填）	头像URL（选填）
+示例：ojr0j6	游戏技术社区	游戏	gametech	https://example.com/avatar.png

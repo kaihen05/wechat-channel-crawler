@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信 API 配置测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-2xl">
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-6">🔑 微信 API 配置测试</h1>
+
+            <!-- IP Info -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <h2 class="text-lg font-semibold text-gray-700 mb-3">服务器信息</h2>
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">服务器 IP：</span>
+                        <code class="bg-blue-100 text-blue-800 px-3 py-1 rounded">111.206.145.24</code>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">AppID：</span>
+                        <code class="bg-gray-100 text-gray-800 px-3 py-1 rounded">wx26b8b484b4bb782d</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Button -->
+            <div class="space-y-4">
+                <button
+                    onclick="testAPI()"
+                    id="testBtn"
+                    class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                    测试微信 API 连接
+                </button>
+
+                <!-- Result -->
+                <div id="result" class="hidden"></div>
+            </div>
+
+            <!-- Setup Guide -->
+            <div class="mt-6">
+                <h2 class="text-lg font-semibold text-gray-700 mb-3">📖 配置指南</h2>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <ol class="list-decimal list-inside space-y-2 text-sm text-blue-800">
+                        <li>登录 <a href="https://mp.weixin.qq.com" target="_blank" class="text-blue-600 hover:underline">微信公众平台</a></li>
+                        <li>进入"设置与开发" → "基本配置"</li>
+                        <li>找到"服务器配置"或"IP白名单"</li>
+                        <li>添加 IP: <code class="bg-blue-100 px-2 py-1 rounded">111.206.145.24</code></li>
+                        <li>保存配置，等待 2-5 分钟生效</li>
+                        <li>点击上方按钮测试</li>
+                    </ol>
+                </div>
+                <div class="mt-4">
+                    <a href="/IP_WHITELIST_配置指南.md" target="_blank" class="text-blue-600 hover:underline">
+                        查看详细配置指南 →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+
+        async function testAPI() {
+            const btn = document.getElementById('testBtn');
+            const resultDiv = document.getElementById('result');
+
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+            resultDiv.classList.remove('hidden');
+            resultDiv.className = 'mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg';
+            resultDiv.innerHTML = '<p class="text-gray-600">正在测试 API 连接...</p>';
+
+            try {
+                // 测试获取 access token
+                const response = await fetch(`${API_BASE}/test/wechat-api`, {
+                    method: 'POST'
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP 错误: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('Response data:', result);
+
+                if (result.success) {
+                    resultDiv.className = 'mt-4 p-4 bg-green-50 border border-green-200 rounded-lg';
+                    resultDiv.innerHTML = `
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">✅</span>
+                            <span class="text-green-800 font-bold text-lg">测试成功！</span>
+                        </div>
+                        <p class="text-green-700">IP 白名单配置正确，可以正常调用微信 API</p>
+                        <p class="text-sm text-green-600 mt-2">
+                            Access Token: ${result.access_token.substring(0, 20)}...
+                        </p>
+                    `;
+                } else {
+                    resultDiv.className = 'mt-4 p-4 bg-red-50 border border-red-200 rounded-lg';
+                    resultDiv.innerHTML = `
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">❌</span>
+                            <span class="text-red-800 font-bold text-lg">测试失败</span>
+                        </div>
+                        <p class="text-red-700 mb-2">${result.error}</p>
+                        ${result.error_code === 40164 ? `
+                            <div class="bg-red-100 border border-red-300 rounded p-3 mt-2">
+                                <p class="text-sm text-red-800 font-medium mb-2">解决方案：</p>
+                                <ol class="list-decimal list-inside text-sm text-red-700 space-y-1">
+                                    <li>登录 <a href="https://mp.weixin.qq.com" target="_blank" class="text-blue-600 hover:underline">微信公众平台</a></li>
+                                    <li>进入"设置与开发" → "基本配置"</li>
+                                    <li>在 IP 白名单中添加: <code class="bg-red-200 px-1 rounded">111.206.145.24</code></li>
+                                    <li>保存并等待 2-5 分钟生效</li>
+                                    <li>再次点击测试按钮</li>
+                                </ol>
+                            </div>
+                        ` : ''}
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.className = 'mt-4 p-4 bg-red-50 border border-red-200 rounded-lg';
+                resultDiv.innerHTML = `
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-2xl">❌</span>
+                        <span class="text-red-800 font-bold text-lg">请求失败</span>
+                    </div>
+                    <p class="text-red-700">无法连接到服务器，请确保后端服务正在运行</p>
+                    <p class="text-sm text-red-600 mt-2">错误信息: ${error.message}</p>
+                    <p class="text-sm text-red-600 mt-2">请打开浏览器的开发者工具（F12）查看控制台获取更多详细信息</p>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '测试微信 API 连接';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信 API 简单测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 微信 API 配置测试</h1>
+
+        <div style="margin: 20px 0;">
+            <p><strong>服务器 IP：</strong> 111.206.145.24</p>
+            <p><strong>AppID：</strong> wx26b8b484b4bb782d</p>
+        </div>
+
+        <button id="testBtn" onclick="testAPI()">测试微信 API 连接</button>
+
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function testAPI() {
+            const btn = document.getElementById('testBtn');
+            const resultDiv = document.getElementById('result');
+
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.innerHTML = '<p>正在测试 API 连接...</p>';
+
+            try {
+                console.log('发送请求到: ' + window.location.origin + '/api/articles/test/wechat-api');
+
+                const response = await fetch(window.location.origin + '/api/articles/test/wechat-api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('响应状态:', response.status);
+                console.log('响应头:', response.headers);
+
+                const data = await response.text();
+                console.log('响应内容:', data);
+
+                const result = JSON.parse(data);
+                console.log('解析后的数据:', result);
+
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h2>✅ 测试成功！</h2>
+                        <p><strong>IP 白名单配置正确，可以正常调用微信 API</strong></p>
+                        <p><strong>Access Token:</strong> ${result.access_token.substring(0, 30)}...</p>
+                        <p>现在可以更新文章阅读量了！</p>
+                        <p><a href="/manage.html" style="color: #007bff;">前往管理页面</a></p>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    let errorMessage = result.error || '未知错误';
+                    let errorCode = result.error_code || '';
+
+                    let extraInfo = '';
+                    if (errorCode === 40164) {
+                        extraInfo = `
+                            <h3>解决方案：</h3>
+                            <ol>
+                                <li>登录 <a href="https://mp.weixin.qq.com" target="_blank">微信公众平台</a></li>
+                                <li>进入"设置与开发" → "基本配置"</li>
+                                <li>在 IP 白名单中添加: <code>111.206.145.24</code></li>
+                                <li>保存并等待 2-5 分钟生效</li>
+                                <li>再次点击测试按钮</li>
+                            </ol>
+                        `;
+                    }
+
+                    resultDiv.innerHTML = `
+                        <h2>❌ 测试失败</h2>
+                        <p><strong>错误代码:</strong> ${errorCode}</p>
+                        <p><strong>错误信息:</strong> ${errorMessage}</p>
+                        ${extraInfo}
+                    `;
+                }
+            } catch (error) {
+                console.error('捕获到错误:', error);
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h2>❌ 请求失败</h2>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                    <p>请确保后端服务正在运行</p>
+                    <p>请按 F12 打开开发者工具查看控制台获取更多信息</p>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '测试微信 API 连接';
+            }
+        }
+    </script>
+</body>
+</html>

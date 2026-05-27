@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置微信凭证</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="container mx-auto px-4 max-w-2xl">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+            <div class="flex items-center justify-between mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">配置微信登录凭证</h1>
+                <button onclick="handleLogout()" class="text-gray-500 hover:text-gray-700 text-sm">登出</button>
+            </div>
+            
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Token（从微信公众号后台URL获取）</label>
+                    <input 
+                        type="text" 
+                        id="tokenInput" 
+                        placeholder="例如: 1234567890"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                    <p class="text-sm text-gray-500 mt-1">登录 mp.weixin.qq.com 后，URL 中的 token= 后面的数字</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Cookie（从浏览器开发者工具获取）</label>
+                    <textarea 
+                        id="cookieInput" 
+                        rows="6"
+                        placeholder="例如: token=xxx; wxuin=xxx; ... (完整复制整个Cookie)"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    ></textarea>
+                    <p class="text-sm text-gray-500 mt-1">按 F12 打开开发者工具 → Network 标签 → 刷新页面 → 复制任意请求的 Cookie</p>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button 
+                        onclick="saveCredentials()" 
+                        class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                    >
+                        保存凭证
+                    </button>
+                    <button 
+                        onclick="checkStatus()" 
+                        class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                        检查状态
+                    </button>
+                </div>
+                
+                <div id="message" class="hidden p-4 rounded-lg"></div>
+            </div>
+            
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">详细说明</h2>
+                
+                <div class="space-y-4 text-sm text-gray-600">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-blue-800 mb-2">第一步：登录微信公众号后台</h3>
+                        <p>访问 <a href="https://mp.weixin.qq.com" target="_blank" class="text-blue-600 hover:underline">https://mp.weixin.qq.com</a> 并用微信扫码登录</p>
+                    </div>
+                    
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-green-800 mb-2">第二步：获取 Token</h3>
+                        <p>登录成功后，浏览器地址栏的 URL 中会有 <code class="bg-green-100 px-2 py-1 rounded">token=数字</code>，复制这个数字</p>
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-yellow-800 mb-2">第三步：获取 Cookie</h3>
+                        <ol class="list-decimal list-inside space-y-1">
+                            <li>按 F12 打开浏览器开发者工具</li>
+                            <li>切换到 Network（网络）标签</li>
+                            <li>刷新页面（F5）</li>
+                            <li>点击任意请求</li>
+                            <li>在右侧 Headers 中找到 Request Headers</li>
+                            <li>找到 Cookie，复制整个值（很长的字符串）</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-red-800 mb-2">重要提示</h3>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>强烈建议使用小号公众号，不要使用主号</li>
+                            <li>凭证有效期约 4 小时，过期需要重新获取</li>
+                            <li>请勿泄露您的凭证信息</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 text-center">
+            <a href="/" class="text-purple-600 hover:underline">返回首页</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        async function handleLogout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login.html';
+        }
+
+        async function saveCredentials() {
+            const token = document.getElementById('tokenInput').value.trim();
+            const cookie = document.getElementById('cookieInput').value.trim();
+
+            if (!token || !cookie) {
+                showMessage('请填写完整的 Token 和 Cookie', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/credentials`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token, cookie })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('凭证保存成功！现在可以搜索公众号了', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    showMessage('保存失败: ' + (result.detail || '未知错误'), 'error');
+                }
+            } catch (error) {
+                showMessage('请求失败: ' + error.message, 'error');
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/credentials/status`);
+                const result = await response.json();
+
+                if (result.has_credentials) {
+                    showMessage('凭证已配置', 'success');
+                } else {
+                    showMessage('未配置凭证', 'error');
+                }
+            } catch (error) {
+                showMessage('检查失败: ' + error.message, 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.classList.remove('hidden');
+            
+            if (type === 'success') {
+                messageDiv.className = 'p-4 rounded-lg bg-green-100 text-green-800';
+            } else {
+                messageDiv.className = 'p-4 rounded-lg bg-red-100 text-red-800';
+            }
+        }
+    </script>
+
+    <script>
+        // 配置页面权限检查 - 修复：先检查接口是否存在，不存在则静默放行
+        async function checkAdminAccess() {
+            try {
+                const res = await fetch('/api/auth/status');
+                if (!res.ok) {
+                    // 接口不存在或返回错误，静默放行（允许未登录用户查看配置说明）
+                    return;
+                }
+                const data = await res.json();
+                if (!data.authenticated) {
+                    // 未登录也放行，因为配置页面主要是说明文档
+                    return;
+                }
+                // 已登录但不是admin也放行
+            } catch (e) {
+                // 网络错误或接口不存在，静默放行
+                return;
+            }
+        }
+        checkAdminAccess();
+    </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>测试文章API</title>
+</head>
+<body>
+    <h1>测试文章API</h1>
+    <button onclick="testAPI()">测试API</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testAPI() {
+            try {
+                const response = await fetch('http://localhost:8000/api/articles?limit=2');
+                const articles = await response.json();
+                
+                let html = '';
+                articles.forEach(article => {
+                    html += '\n=== 文章 ===\n';
+                    html += 'ID: ' + article.id + '\n';
+                    html += '标题: ' + article.title + '\n';
+                    html += '公众号: ' + article.channel_name + '\n';
+                    html += '公众号累计阅读量: ' + article.channel_total_read_num + '\n';
+                    html += '文章阅读量: ' + article.read_num + '\n';
+                    html += '所有字段: ' + JSON.stringify(Object.keys(article)) + '\n';
+                });
+                
+                document.getElementById('result').textContent = html;
+            } catch (error) {
+                document.getElementById('result').textContent = '错误: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

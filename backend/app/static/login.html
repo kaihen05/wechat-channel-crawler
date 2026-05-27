@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 微信公众号聚合器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+        .role-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .role-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .role-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+        .role-card.selected .role-icon {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-md px-4">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <div class="inline-block bg-white rounded-2xl shadow-lg p-6 mb-4">
+                <span class="text-5xl">📚</span>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800">微信公众号聚合器</h1>
+            <p class="text-gray-500 mt-2">智能收集高校社团公众号文章</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-white rounded-2xl shadow-lg p-8">
+            <!-- 角色选择 -->
+            <h2 class="text-xl font-bold text-gray-800 mb-5 text-center">选择登录身份</h2>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <!-- 超级管理者 -->
+                <div class="role-card selected border-2 border-purple-500 rounded-xl p-5 text-center" id="role-admin" onclick="selectRole('admin')">
+                    <div class="role-icon text-4xl mb-3 transition-transform">👑</div>
+                    <h3 class="font-bold text-gray-800 text-sm">超级管理者</h3>
+                    <p class="text-xs text-gray-500 mt-1">全部功能</p>
+                    <div class="mt-2 space-y-1">
+                        <span class="inline-block text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">公众号管理</span>
+                        <span class="inline-block text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">数据配置</span>
+                    </div>
+                </div>
+                <!-- 普通用户 -->
+                <div class="role-card border-2 border-gray-200 rounded-xl p-5 text-center" id="role-viewer" onclick="selectRole('viewer')">
+                    <div class="role-icon text-4xl mb-3 transition-transform">👀</div>
+                    <h3 class="font-bold text-gray-800 text-sm">普通用户</h3>
+                    <p class="text-xs text-gray-500 mt-1">只读浏览</p>
+                    <div class="mt-2 space-y-1">
+                        <span class="inline-block text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">文章浏览</span>
+                        <span class="inline-block text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">AI推荐</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error-msg" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
+                密码错误，请重试
+            </div>
+
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2" id="password-label">管理者密码</label>
+                    <input 
+                        type="password" 
+                        id="password-input" 
+                        placeholder="请输入密码" 
+                        required
+                        class="input-focus w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:border-purple-500 transition-colors"
+                    >
+                    <p class="text-xs text-gray-400 mt-2" id="password-hint">超级管理者拥有所有功能权限，包括公众号管理</p>
+                </div>
+                <button 
+                    type="submit" 
+                    id="login-btn"
+                    class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                >
+                    登录
+                </button>
+            </form>
+        </div>
+
+        <p class="text-center text-gray-400 text-sm mt-6">
+            如需访问密码，请联系管理员
+        </p>
+    </div>
+
+    <script>
+        let selectedRole = 'admin';
+
+        // 如果已登录，直接跳转
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/status');
+                const data = await res.json();
+                if (data.authenticated) {
+                    window.location.href = '/';
+                }
+            } catch (e) {}
+        }
+        checkAuth();
+
+        function selectRole(role) {
+            selectedRole = role;
+            // 更新卡片样式
+            document.getElementById('role-admin').className = 
+                `role-card ${role === 'admin' ? 'selected border-purple-500' : 'border-gray-200'} border-2 rounded-xl p-5 text-center`;
+            document.getElementById('role-viewer').className = 
+                `role-card ${role === 'viewer' ? 'selected border-purple-500' : 'border-gray-200'} border-2 rounded-xl p-5 text-center`;
+            
+            // 更新密码标签和提示
+            const label = document.getElementById('password-label');
+            const hint = document.getElementById('password-hint');
+            if (role === 'admin') {
+                label.textContent = '管理者密码';
+                hint.textContent = '超级管理者拥有所有功能权限，包括公众号管理';
+            } else {
+                label.textContent = '访问密码';
+                hint.textContent = '普通用户可浏览文章和AI推荐，无法管理公众号';
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const password = document.getElementById('password-input').value;
+            const errorEl = document.getElementById('error-msg');
+            const btn = document.getElementById('login-btn');
+            
+            errorEl.classList.add('hidden');
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password, role: selectedRole })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    window.location.href = '/';
+                } else {
+                    const data = await res.json();
+                    errorEl.textContent = data.detail || '密码错误，请重试';
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorEl.textContent = '网络错误，请重试';
+                errorEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '登录';
+            }
+        }
+    </script>
+</body>
+</html>
